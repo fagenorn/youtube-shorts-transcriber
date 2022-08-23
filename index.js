@@ -1,25 +1,35 @@
 const Innertube = require('youtubei.js');
 const fs = require('fs');
 const youtubedl = require('youtube-dl-exec')
+const { exec } = require("child_process");
 
 const youtube_link = "https://www.youtube.com/shorts/43q-P2QEiWU";
 
 (async () => {
 
+    let lang = "es"
+    let out_file = "out";
+    let subprocess = youtubedl.exec(youtube_link, { writeSub: true, writeAutoSub: true, subLang: lang, output: out_file });
+    subprocess.stdout.pipe(fs.createWriteStream('stdout.txt'))
+    await subprocess;
 
-
-    let result = await youtubedl(youtube_link, {
-        dumpSingleJson: true,
-        noCheckCertificates: true,
-        noWarnings: true,
-        preferFreeFormats: true,
-        addHeader: [
-            'referer:youtube.com',
-            'user-agent:googlebot'
-        ]
+    exec(`ffmpeg -i ${out_file}.webm -i ${out_file}.${lang}.vtt \
+  -map 0:v -map 0:a -map 1 \
+  -metadata:s:s:0 language=[eng] \
+  -c:v copy -c:a copy -c:s srt \
+  ${out_file}.mkv`, (error, stdout, stderr) => {
+        if (error) {
+            console.log(`error: ${error.message}`);
+            return;
+        }
+        if (stderr) {
+            console.log(`stderr: ${stderr}`);
+            return;
+        }
+        console.log(`stdout: ${stdout}`);
     });
 
-    console.log(result);
+    // console.log(result);
 
 
 
